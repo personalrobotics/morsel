@@ -2,7 +2,11 @@ function VirtualButton(parentobj, options) {
 	this.node = new THREE.Object3D();
 	parentobj.add(this.node);
 
-	this.options = options;
+	this.options = {
+		position: new THREE.Vector3(0.0, 0.0, 0.0)
+	};
+	$.extend(this.options, options);
+
 	this.createCollisionObject();
 
 	this.node.position.copy(this.options.position);
@@ -10,6 +14,7 @@ function VirtualButton(parentobj, options) {
 	this.active = true;
 	this.onClick = null;
 	this.onView = null;
+	this.onUpdate = null;
 }
 
 
@@ -39,6 +44,92 @@ VirtualButton.prototype.getCollider = function() {
 	return this.collisionObj;
 };
 
+function RingButton(options, shaderlib) {
+	this._options = {
+		radius: 1.0,
+		linewidth: 0.1,
+		npts: 20,
+		linetex: null
+	};
+	$.extend(this._options, options);
+
+	this._lastviewed = false;
+	this._viewed = false;
+
+	this.startView = null;
+	this.endView = null;
+
+	console.log("Creating line circle...");
+	var pts = [];
+	var npts = this._options.npts;
+	var rad = this._options.radius;
+	var dt = 2.0 * Math.PI / (npts - 1);
+	for(var i = 0; i < npts; ++i) {
+		var theta = dt * i;
+		pts.push([Math.cos(theta) * rad, 0.0, Math.sin(theta) * rad]);
+	}
+	this._pathLine = new Orbitline({npts: pts.length, 
+								  linewidth: this._options.linewidth, 
+								  linetex: this._options.linetex}, 
+								  shaderlib);
+	this._pathLine.updateGeometry(pts);
+
+	this._node = new THREE.Object3D();
+	this._node.add(this._pathLine.getNode());
+
+	var tempthis = this;
+	this._button = new VirtualButton(this._node, {});
+	this._button.onView = function() {
+		tempthis._onView();
+	}
+	this._button.onClick = function() {
+		tempthis._onClick();
+	}
+	this._button.onUpdate = function() {
+		tempthis._onUpdate();
+	}
+}
+
+RingButton.prototype._onView = function() {
+	// if we weren't viewed last time, then viewing has
+	// started
+	if(!this._lastviewed) {
+		this._startView();
+	}
+
+	this._viewed = true;
+};
+
+RingButton.prototype._onClick = function() {
+	console.log("Clicked!");
+	if(this.onClick) {
+		this.onClick();
+	}
+};
+
+RingButton.prototype._onUpdate = function() {
+	// if we haven't been viewed since the last update,
+	// and we were viewed the last time, then viewing
+	// has ended
+	if(!this._viewed && this._lastviewed) {
+		this._endView();
+	}
+
+	this._lastviewed = this._viewed;
+	this._viewed = false;
+};
+
+RingButton.prototype._startView = function() {
+	if(this.startView) {
+		this.startView();
+	}
+};
+
+RingButton.prototype._endView = function() {
+	if(this.endView) {
+		this.endView();
+	}
+};
 
 function VirtualButtonManager(manageropts) {
 	this._options = {

@@ -44,6 +44,10 @@ function Orbitline(options, shaderlibrary) {
 	this._vnode = new THREE.Mesh(this._geometry, this._shaderMaterial);
 };
 
+Orbitline.prototype.setLineWidth = function(linewidth) {
+	this._shaderMaterial.uniforms.lineWidth.value = linewidth;
+};
+
 Orbitline.prototype.getNode = function() {
 	return this.getTHREENode();
 };
