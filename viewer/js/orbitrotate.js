@@ -50,11 +50,14 @@ var mouseDownState = false;
 var mouseX = 0, mouseY = 0;
 var prevMouseX = 0, prevMouseY = 0;
 var mouseDX = 0, mouseDY = 0;
+var sMX = 0.0, sMY = 0.0;
 
 var zoomButtonDown = false;
 var zoomButtonKeycode = 16; // shift
 var panButtonDown = false;
 var panButtonKeycode = 17; // ctrl
+
+var userMouseClick = null;
 
 
 function initOrbitRotator(target) {
@@ -87,6 +90,9 @@ function updateCamera() {
 
 function onCamMouseDown() {
 	mouseDownState = true;
+	if(userMouseClick) {
+		userMouseClick(sMX, sMY);
+	}
 }
 
 function onCamMouseUp() {
@@ -114,4 +120,6 @@ function onCamDocumentKeyUp(event) {
 function onCamDocumentMouseMove( event ) {
 	mouseX = event.clientX - windowHalfX;
 	mouseY = event.clientY - windowHalfY;
+	sMX = event.clientX / windowX;
+	sMY = event.clientY / windowY;
 }

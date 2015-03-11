@@ -3,7 +3,8 @@ function VirtualButton(parentobj, options) {
 	parentobj.add(this.node);
 
 	this.options = {
-		position: new THREE.Vector3(0.0, 0.0, 0.0)
+		position: new THREE.Vector3(0.0, 0.0, 0.0),
+		radius: 1.0
 	};
 	$.extend(this.options, options);
 
@@ -44,12 +45,14 @@ VirtualButton.prototype.getCollider = function() {
 	return this.collisionObj;
 };
 
-function RingButton(options, shaderlib) {
+function RingButton(options, shaderlib, buttonmanager) {
 	this._options = {
 		radius: 1.0,
-		linewidth: 0.1,
+		linewidth: 0.01,
 		npts: 20,
-		linetex: null
+		linetex: null,
+		debug: false,
+		parent: null
 	};
 	$.extend(this._options, options);
 
@@ -75,10 +78,15 @@ function RingButton(options, shaderlib) {
 	this._pathLine.updateGeometry(pts);
 
 	this._node = new THREE.Object3D();
+	if(this._options.parent) {
+		this._options.parent.add(this._node);
+	}
+
 	this._node.add(this._pathLine.getNode());
 
 	var tempthis = this;
-	this._button = new VirtualButton(this._node, {});
+	this._button = new VirtualButton(this._node, {debug: this._options.debug, 
+												  radius: this._options.radius});
 	this._button.onView = function() {
 		tempthis._onView();
 	}
@@ -88,7 +96,13 @@ function RingButton(options, shaderlib) {
 	this._button.onUpdate = function() {
 		tempthis._onUpdate();
 	}
+
+	buttonmanager.addButton(this._button);
 }
+
+RingButton.prototype.getNode = function() {
+	return this._node;
+};
 
 RingButton.prototype._onView = function() {
 	// if we weren't viewed last time, then viewing has
@@ -102,6 +116,9 @@ RingButton.prototype._onView = function() {
 
 RingButton.prototype._onClick = function() {
 	console.log("Clicked!");
+	this._options.linewidth *= 1.2;
+	this._pathLine.setLineWidth(this._options.linewidth);
+
 	if(this.onClick) {
 		this.onClick();
 	}
@@ -120,12 +137,16 @@ RingButton.prototype._onUpdate = function() {
 };
 
 RingButton.prototype._startView = function() {
+	this._pathLine.setLineWidth(this._options.linewidth * 2.0);
+
 	if(this.startView) {
 		this.startView();
 	}
 };
 
 RingButton.prototype._endView = function() {
+	this._pathLine.setLineWidth(this._options.linewidth);
+
 	if(this.endView) {
 		this.endView();
 	}
@@ -133,8 +154,7 @@ RingButton.prototype._endView = function() {
 
 function VirtualButtonManager(manageropts) {
 	this._options = {
-		screenWidth: 800,
-		screenHeight: 600
+		// nothing right now
 	};
 	$.extend(this._options, manageropts);
 	this._buttons = [];
@@ -146,11 +166,6 @@ VirtualButtonManager.prototype.addButton = function(button) {
 	this._buttons.push(button);
 };
 
-VirtualButtonManager.prototype._computeClickRay = function(relX, relY) {
-	if(!this._projector) {
-
-	}
-};
 
 // apply a function f to objects along a ray specified by screen position
 // (in normalized coordinates) [x,y]
@@ -160,6 +175,7 @@ VirtualButtonManager.prototype._applyRay = function(x, y, f, closestOnly) {
 	var nearest = 10000.0;
 	var nearobj = null;
 
+	//console.log("Ray " + x + " " + y);
 	this._raycaster.setFromCamera( new THREE.Vector2(x,y), this._cam );
 
 	for(var i = 0; i < this._buttons.length; ++i) {
@@ -181,9 +197,12 @@ VirtualButtonManager.prototype._applyRay = function(x, y, f, closestOnly) {
 	}
 };
 
-VirtualButtonManager.prototype.updateClick = function(clickX, clickY) {
-	var relX = (clickX / this._options.screenWidth) * 2.0 - 1.0;
-	var relY = -(clickY / this._options.screenHeight) * 2.0 - 1.0;
+VirtualButtonManager.prototype.updateClick = function(relX, relY) {
+	// scale from [0,1] to [-1,1]
+	relX = (relX * 2.0) - 1.0; 
+	relY = -(relY * 2.0) + 1.0;
+
+	console.log("Click: " + relX + ", " + relY);
 
 	this._applyRay(relX, relY, function(button) {
 		if(button.onClick) {
