@@ -50,10 +50,14 @@ function RingButton(options, shaderlib, buttonmanager) {
 		radius: 1.0,
 		linewidth: 0.01,
 		npts: 20,
-		linetex: null,
+		highlight_color: new THREE.Vector4(1.0, 1.0, 0.0, 0.0),
+		base_color: new THREE.Vector4(0.5, 0.5, 0.5, 0.0),
+		highlight_tex: null,
+		base_tex: null,
 		debug: false,
 		parent: null,
-		rotaterate: 1.0
+		rotaterate: 1.0,
+		selviewtime: 10.0
 	};
 	$.extend(this._options, options);
 
@@ -65,6 +69,8 @@ function RingButton(options, shaderlib, buttonmanager) {
 
 	this._selected = false;
 	this._theta = 0.0;
+
+	this._viewtime = 0.0;
 
 	console.log("Creating line circle...");
 	var pts = [];
@@ -134,10 +140,22 @@ RingButton.prototype._onUpdate = function() {
 	// has ended
 	if(!this._viewed && this._lastviewed) {
 		this._endView();
+	} else if(this._viewed) {
+		this._viewtime += 1.0 / 60.0;
+		if(this._viewtime > this._options.selviewtime && !this._selected) {
+			this._onClick();
+		} else if(!this._selected) {
+			this._updateViewStyle();
+		}
 	}
 
 	this._lastviewed = this._viewed;
 	this._viewed = false;
+};
+
+RingButton.prototype._updateViewStyle = function() {
+	var color0 = new THREE.Vector4(this._options.base_color);
+	var color1 = new THREE.Vector4(this._options.highlight_color);
 };
 
 RingButton.prototype._startView = function() {
@@ -150,6 +168,7 @@ RingButton.prototype._startView = function() {
 
 RingButton.prototype._endView = function() {
 	this._pathLine.setLineWidth(this._options.linewidth);
+	this._viewtime = 0.0;
 
 	if(this.endView) {
 		this.endView();
@@ -157,11 +176,15 @@ RingButton.prototype._endView = function() {
 };
 
 RingButton.prototype.select = function() {
-	// todo
+	this._pathLine.setLineColor(this._options.highlight_color);
+	this._pathLine.setLineTexture(this._options.highlight_tex);
+	this._selected = true;
 };
 
 RingButton.prototype.deselect = function() {
-	// todo
+	this._pathLine.setLineColor(this._options.base_color);
+	this._pathLine.setLineTexture(this._options.base_tex);
+	this._selected = false;
 };
 
 function VirtualButtonManager(manageropts) {

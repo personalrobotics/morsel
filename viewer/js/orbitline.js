@@ -48,6 +48,14 @@ Orbitline.prototype.setLineWidth = function(linewidth) {
 	this._shaderMaterial.uniforms.lineWidth.value = linewidth;
 };
 
+Orbitline.prototype.setLineColor = function(r, g, b) {
+	this._shaderMaterial.uniforms.diffuseColor.value.set(r, g, b, 0.0);
+};
+
+Orbitline.prototype.setLineColorV = function(colorvec) {
+	this._shaderMaterial.uniforms.diffuseColor.value.copy(colorvec);
+};
+
 Orbitline.prototype.getNode = function() {
 	return this.getTHREENode();
 };
