@@ -52,7 +52,8 @@ function RingButton(options, shaderlib, buttonmanager) {
 		npts: 20,
 		linetex: null,
 		debug: false,
-		parent: null
+		parent: null,
+		rotaterate: 1.0
 	};
 	$.extend(this._options, options);
 
@@ -61,6 +62,9 @@ function RingButton(options, shaderlib, buttonmanager) {
 
 	this.startView = null;
 	this.endView = null;
+
+	this._selected = false;
+	this._theta = 0.0;
 
 	console.log("Creating line circle...");
 	var pts = [];
@@ -152,6 +156,14 @@ RingButton.prototype._endView = function() {
 	}
 };
 
+RingButton.prototype.select = function() {
+	// todo
+};
+
+RingButton.prototype.deselect = function() {
+	// todo
+};
+
 function VirtualButtonManager(manageropts) {
 	this._options = {
 		// nothing right now
@@ -227,4 +239,48 @@ VirtualButtonManager.prototype.updateView = function(cam) {
 			button.onView();
 		}
 	}, true);
+};
+
+
+function RingSelectionSet(options, shaderlib) {
+	this._options = {
+		radius: 0.1,
+		npts: 30,
+		linewidth: 0.1,
+		linetex: null,
+		debug: false,
+		parent: null
+	};
+	$.extend(this._options, options);
+
+	this._shaderlib = shaderlib;
+	this._root = new THREE.Object3D();
+	this._options.parent.add(this._root);
+	this._bmanager = new VirtualButtonManager();
+}
+
+RingSelectionSet.prototype.updateButtonLocations = function(newLocations) {
+	// todo
+};
+
+RingSelectionSet.prototype._selectButton = function(button) {
+	for(var i = 0; i < this._buttons.length; ++i) {
+		if(this._buttons[i] === button) {
+			this._buttons[i].select();
+		} else {
+			this._buttons[i].deselect();
+		}
+	}
+};
+
+RingSelectionSet.prototype._createButton = function() {
+	console.log("Creating line circle...");
+	var opts = {};
+	$.extend(opts, this._options);
+	$.extend(opts, {
+		parent: this._root
+	});
+
+	var b = new RingButton(opts, this._shaderlib, this._bmanager);
+	this._buttons.push(b);
 };
