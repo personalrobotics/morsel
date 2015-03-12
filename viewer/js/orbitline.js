@@ -56,6 +56,10 @@ Orbitline.prototype.setLineColorV = function(colorvec) {
 	this._shaderMaterial.uniforms.diffuseColor.value.copy(colorvec);
 };
 
+Orbitline.prototype.setLineTexture = function(newtex) {
+	this._shaderMaterial.uniforms.hatchMap.value = newtex;
+};
+
 Orbitline.prototype.getNode = function() {
 	return this.getTHREENode();
 };
