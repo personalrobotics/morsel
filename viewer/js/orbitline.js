@@ -5,6 +5,8 @@ function Orbitline(options, shaderlibrary) {
 							  arcPos: {type: "f", value: []},
 							  linecolor: {type: "v3", value: []}};
 	this._npts = options.npts;
+	this._vmult = options.vmult || 1.0;
+	this._umult = options.umult || 1.0;
 	this.buildGeometry();
 	//this.updateGeometry(options.points);
 
@@ -112,7 +114,7 @@ Orbitline.prototype.updateGeometry = function(newpts) {
 		pivotDirs[2*i+1].subVectors(p1, p0);
 		pivotPoses[2*i+0].copy(p1);
 		pivotPoses[2*i+1].copy(p1);
-		arcpos += pivotDirs[2*i+0].length();
+		arcpos += (pivotDirs[2*i+0].length() * this._vmult);
 		arcPoses[2*i+0] = arcpos;
 		arcPoses[2*i+1] = arcpos;
 	};
@@ -137,7 +139,7 @@ Orbitline.prototype.buildGeometry = function() {
 	this._geometry = new THREE.Geometry();
 
 	var uv0 = new THREE.Vector3(0.0,0.0);
-	var uv1 = new THREE.Vector3(0.0,1.0);
+	var uv1 = new THREE.Vector3(0.0,this._umult);
 	var face_uv0 = [uv0, uv1, uv1];
 	var face_uv1 = [uv0, uv1, uv0];
 	var tval = 0.5;

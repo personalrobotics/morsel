@@ -57,7 +57,8 @@ function RingButton(options, shaderlib, buttonmanager) {
 		debug: false,
 		parent: null,
 		rotaterate: 1.0,
-		selviewtime: 10.0
+		selviewtime: 10.0,
+		id: "0"
 	};
 	$.extend(this._options, options);
 
@@ -83,7 +84,9 @@ function RingButton(options, shaderlib, buttonmanager) {
 	}
 	this._pathLine = new Orbitline({npts: pts.length, 
 								  linewidth: this._options.linewidth, 
-								  linetex: this._options.linetex}, 
+								  linetex: this._options.linetex || this._options.base_tex,
+								  vmult: 10.0,
+								  umult: 0.1}, 
 								  shaderlib);
 	this._pathLine.updateGeometry(pts);
 
@@ -125,9 +128,9 @@ RingButton.prototype._onView = function() {
 };
 
 RingButton.prototype._onClick = function() {
-	console.log("Clicked!");
-	this._options.linewidth *= 1.2;
-	this._pathLine.setLineWidth(this._options.linewidth);
+	console.log("Clicked " + this._options.id);
+	//this._options.linewidth *= 1.2;
+	//this._pathLine.setLineWidth(this._options.linewidth);
 
 	if(this.onClick) {
 		this.onClick();
@@ -154,17 +157,22 @@ RingButton.prototype._onUpdate = function() {
 };
 
 RingButton.prototype._updateViewStyle = function() {
-	var color0 = new THREE.Vector4(this._options.base_color);
-	var color1 = new THREE.Vector4(this._options.highlight_color);
+	var color0 = new THREE.Vector4();
+	color0.copy(this._options.base_color);
+	var color1 = new THREE.Vector4();
+	color1.copy(this._options.highlight_color);
 
 	var alpha = this._viewtime / this._options.selviewtime;
 	if(alpha > 1.0) {
 		alpha = 1.0;
 	}
+
 	this._pathLine.setLineColorV(color0.lerp(color1, alpha))
 };
 
 RingButton.prototype._startView = function() {
+	console.log("Start view " + this._options.id);
+
 	this._pathLine.setLineWidth(this._options.linewidth * 2.0);
 
 	if(this.startView) {
@@ -173,6 +181,8 @@ RingButton.prototype._startView = function() {
 };
 
 RingButton.prototype._endView = function() {
+	console.log("End view " + this._options.id);
+
 	this._pathLine.setLineWidth(this._options.linewidth);
 	this._viewtime = 0.0;
 
@@ -186,12 +196,16 @@ RingButton.prototype.getNode = function() {
 };
 
 RingButton.prototype.select = function() {
+	console.log("Selected " + this._options.id);
+
 	this._pathLine.setLineColorV(this._options.highlight_color);
 	this._pathLine.setLineTexture(this._options.highlight_tex);
 	this._selected = true;
 };
 
 RingButton.prototype.deselect = function() {
+	console.log("Deselected " + this._options.id);
+
 	this._pathLine.setLineColorV(this._options.base_color);
 	this._pathLine.setLineTexture(this._options.base_tex);
 	this._selected = false;
@@ -199,7 +213,7 @@ RingButton.prototype.deselect = function() {
 
 function VirtualButtonManager(manageropts) {
 	this._options = {
-		// nothing right now
+		allowviewselect: true
 	};
 	$.extend(this._options, manageropts);
 	this._buttons = [];
@@ -267,11 +281,13 @@ VirtualButtonManager.prototype.updateAll = function() {
 VirtualButtonManager.prototype.updateView = function(cam) {
 	this._cam = cam;
 
-	this._applyRay(0.0, 0.0, function(button) {
-		if(button.onView) {
-			button.onView();
-		}
-	}, true);
+	if(this._options.allowviewselect) {
+		this._applyRay(0.0, 0.0, function(button) {
+			if(button.onView) {
+				button.onView();
+			}
+		}, true);
+	}
 };
 
 
@@ -279,23 +295,28 @@ function RingSelectionSet(options, shaderlib) {
 	this._options = {
 		radius: 0.1,
 		npts: 30,
-		linewidth: 0.1,
+		linewidth: 0.01,
 		linetex: null,
 		debug: false,
-		parent: null
+		parent: null,
+		selmovethresh: 0.2,
+		allowviewselect: true
 	};
 	$.extend(this._options, options);
 
 	this._shaderlib = shaderlib;
 	this._root = new THREE.Object3D();
 	this._options.parent.add(this._root);
-	this._bmanager = new VirtualButtonManager();
+	this._bmanager = new VirtualButtonManager(this._options);
 	this._selected = null;
+
+	this._buttons = [];
 }
 
 RingSelectionSet.prototype.updateButtonLocations = function(newLocations) {
-	var prevSelPos = new THREE.Vector3();
+	var prevSelPos = null;
 	if(this._selected) {
+		prevSelPos = new THREE.Vector3();
 		prevSelPos.copy(this._selected.getNode().position);
 	}
 
@@ -316,11 +337,14 @@ RingSelectionSet.prototype.updateButtonLocations = function(newLocations) {
 
 
 	for(var i = 0; i < this._buttons.length; ++i) {
-		tempvec.subVectors(prevSelPos, this._buttons[i].getNode().position);
-		tempdist = tempvec.length();
-		if(tempdist < closetdist) {
-			closetdist = tempdist;
-			closestbutton = this._buttons[i];
+
+		if(prevSelPos) {
+			tempvec.subVectors(prevSelPos, this._buttons[i].getNode().position);
+			tempdist = tempvec.length();
+			if(tempdist < closetdist) {
+				closetdist = tempdist;
+				closestbutton = this._buttons[i];
+			}
 		}
 
 		if(i < newLocations.length) {
@@ -329,6 +353,11 @@ RingSelectionSet.prototype.updateButtonLocations = function(newLocations) {
 		} else {
 			this._buttons[i].getNode().visible = false;
 		}
+	}
+
+	// reselect closest button to old selected button's position
+	if(closestbutton && closetdist < this._options.selmovethresh) {
+		this._selectButton(closestbutton);
 	}
 };
 
@@ -350,9 +379,16 @@ RingSelectionSet.prototype._createButton = function() {
 	$.extend(opts, {
 		parent: this._root,
 		base_tex: this._options.base_tex || this._options.linetex,
-		highlight_tex: this._options.highlight_tex || this._options.linetex
+		highlight_tex: this._options.highlight_tex || this._options.linetex,
+		id: this._buttons.length + 1
 	});
 
 	var b = new RingButton(opts, this._shaderlib, this._bmanager);
+
+	var tgt = this;
+	b.onClick = function() {
+		tgt._selectButton(b);
+	};
+
 	this._buttons.push(b);
 };
