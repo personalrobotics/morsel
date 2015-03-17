@@ -435,7 +435,12 @@ RingSelectionSet.prototype._createButton = function() {
 
 	var tgt = this;
 	b.onClick = function() {
-		tgt._selectButton(b);
+		if(!b._selected){
+			tgt._selectButton(b);
+		} else { // b._selected
+			// deselect the button
+			tgt._selectButton(null);
+		}
 	};
 
 	this._buttons.push(b);
