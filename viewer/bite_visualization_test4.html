@@ -56,6 +56,8 @@
 			var rss;
 			var bmanager;
 
+			var cursor;
+
 			$(function(){
 				init();
 			});
@@ -93,11 +95,19 @@
 				};
 				slicevolume = new SliceVolume(soptions, shaderlib);
 
+				cursor = makeRing({npts: 30, 
+								   radius: 0.12,
+								   linetex: linetex, 
+								    linewidth: 0.01}, shaderlib)
+				circleroot.add(cursor.getNode());
+
 				rss = new RingSelectionSet({parent: circleroot, 
 											debug: false, 
 											highlight_tex: linetex2,
 											base_tex: linetex,
 											allowviewselect: false}, shaderlib);
+				rss.addCursor(cursor);
+
 				bmanager = rss._bmanager;
 				//bmanager = new VirtualButtonManager();
 				loadCircles("test.json");
@@ -220,10 +230,13 @@
 			}
 
 			function animate() {
-
 				if(bmanager) {
 					bmanager.updateAll();
 					bmanager.updateView(camera);
+				}
+
+				if(rss) {
+					rss.update(1.0 / 60.0);
 				}
 
 				requestAnimationFrame( animate );

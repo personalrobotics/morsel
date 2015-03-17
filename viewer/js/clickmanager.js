@@ -45,6 +45,29 @@ VirtualButton.prototype.getCollider = function() {
 	return this.collisionObj;
 };
 
+function makeRing(options, shaderlib) {
+	var opts = {npts: 20, 
+			  linewidth: 0.01, 
+			  linetex: null,
+			  vmult: 10.0,
+			  umult: 0.1};
+	$.extend(opts, options);
+
+	var npts = opts.npts;
+	var rad = opts.radius;
+
+	var dt = 2.0 * Math.PI / (npts - 1);
+	var pts = [];
+	for(var i = 0; i < npts; ++i) {
+		var theta = dt * i;
+		pts.push([Math.cos(theta) * rad, 0.0, Math.sin(theta) * rad]);
+	}
+
+	var pathLine = new Orbitline(opts, shaderlib);
+	pathLine.updateGeometry(pts);
+	return pathLine;
+}
+
 function RingButton(options, shaderlib, buttonmanager) {
 	this._options = {
 		radius: 1.0,
@@ -110,7 +133,9 @@ function RingButton(options, shaderlib, buttonmanager) {
 		tempthis._onUpdate();
 	}
 
-	buttonmanager.addButton(this._button);
+	if(buttonmanager) {
+		buttonmanager.addButton(this._button);
+	}
 }
 
 RingButton.prototype.getNode = function() {
@@ -213,7 +238,7 @@ RingButton.prototype.deselect = function() {
 
 function VirtualButtonManager(manageropts) {
 	this._options = {
-		allowviewselect: true
+		allowviewselect: true,
 	};
 	$.extend(this._options, manageropts);
 	this._buttons = [];
@@ -300,10 +325,13 @@ function RingSelectionSet(options, shaderlib) {
 		debug: false,
 		parent: null,
 		selmovethresh: 0.2,
-		allowviewselect: true
+		allowviewselect: true,
+		cursor: null,
+		cursoralpha: 0.1
 	};
 	$.extend(this._options, options);
 
+	this._cursor = this._options.cursor;
 	this._shaderlib = shaderlib;
 	this._root = new THREE.Object3D();
 	this._options.parent.add(this._root);
@@ -312,6 +340,26 @@ function RingSelectionSet(options, shaderlib) {
 
 	this._buttons = [];
 }
+
+RingSelectionSet.prototype.addCursor = function(cursor) {
+	this._cursor = cursor;
+};
+
+RingSelectionSet.prototype._updateCursor = function() {
+	if(this._selected && this._cursor) {
+		var cpos = this._cursor.getNode().position;
+		var dpos = this._selected.getNode().position;
+
+		this._cursor.getNode().position.copy(cpos.lerp(dpos, this._options.cursoralpha));
+		this._cursor.getNode().visible = true;
+	} else if(this._cursor) {
+		this._cursor.getNode().visible = false;
+	}
+};
+
+RingSelectionSet.prototype.update = function(dt) {
+	this._updateCursor();
+};
 
 RingSelectionSet.prototype.updateButtonLocations = function(newLocations) {
 	var prevSelPos = null;
