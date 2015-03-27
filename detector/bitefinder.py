@@ -96,7 +96,7 @@ class BiteFinder:
             bpos = np.unravel_index(np.argmax(bite_quality * valid_map), 
                                     bite_quality.shape)
             bval = bite_quality[bpos]
-            print(bval)
+            #print(bval)
             if bval > self._quality_thresh:
                 ret.append((sanitize_numpy_int(bpos), pixel_bite_radius, bval))
                 cv2.circle(valid_map, swap_xy(bpos), pixel_bite_radius * 2, 0.0, -1)
@@ -110,8 +110,8 @@ class BiteFinder:
             b,g,r = cv2.split(image)
             image = r
         thresh_image = np.array(image, dtype=np.float64)
-        print("min: %g" % np.min(thresh_image))
-        print("max: %g" % np.max(thresh_image))
+        # print("min: %g" % np.min(thresh_image))
+        # print("max: %g" % np.max(thresh_image))
         old_image = thresh_image.copy()
         #old_image[old_image < 1.0] = 255.0
         thresh_image[old_image >= thresh] = -1.0

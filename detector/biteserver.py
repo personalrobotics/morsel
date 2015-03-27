@@ -28,12 +28,12 @@ import bitefinder
 class AdaBiteServer:
 
     def __init__(self):
-        self.VERBOSE = True
+        self.VERBOSE = False
         self.finder = bitefinder.BiteFinder(debug=self.VERBOSE)
         self.ransac_iters = 200
         self.ransac_thresh = 0.01 # 1cm thresh?
         self.max_bites = 10
-        self.bite_height = 0.02
+        self.bite_height = 0.01
         self.pub = None
 
     def decode_uncompressed_f32(self, data):
@@ -58,13 +58,14 @@ class AdaBiteServer:
         # image_half_height/1 = tan(vfov)
         # image_half_height = image_half_width / aspect
         cx = width / 2.0
-        cy = width / 2.0
-        fx = math.tan(hfov / 2.0) * (width / 2.0)
-        fy = math.tan(vfov / 2.0) * (height / 2.0)
+        cy = height / 2.0
+        fx = (width / 2.0) / math.tan(hfov / 2.0) 
+        fy = (height / 2.0) / math.tan(vfov / 2.0)
         self._projmat = np.array([[ fx, 0.0,  cx],
                                   [0.0,  fy,  cy],
                                   [0.0, 0.0, 1.0]])
         self._inv_projmat = np.linalg.inv(self._projmat)
+        print(self._inv_projmat)
 
     def set_intrinsics(self, K, zero_centered = True):
         self._K = K.copy()
@@ -73,9 +74,10 @@ class AdaBiteServer:
         else:
             self._projmat = K.copy()
         self._inv_projmat = np.linalg.inv(self._projmat)
+        print(self._inv_projmat)
 
     def _proj_pt(self, pt):
-        img_pt = np.array([pt[0], pt[1], 1.0])
+        img_pt = np.array([pt[1], pt[0], 1.0])
         tf_pt = self._inv_projmat.dot(img_pt)
         mult = pt[2] / tf_pt[2]
         tf_pt *= mult
