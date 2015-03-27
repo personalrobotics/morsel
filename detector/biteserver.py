@@ -28,7 +28,7 @@ import bitefinder
 class AdaBiteServer:
 
     def __init__(self):
-        self.VERBOSE = True
+        self.VERBOSE = False
         self.finder = bitefinder.BiteFinder(debug=self.VERBOSE)
         self.ransac_iters = 200
         self.ransac_thresh = 0.01 # 1cm thresh?
