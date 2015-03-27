@@ -31,6 +31,9 @@ def ransac_plane(img, niter, inlier_thresh):
     #         if valid_mask[samp]:
     #             return samp
 
+    if(len(sample_locations) == 0):
+        return (best_coeffs, 0, None)
+
     samps = [ (rand_samp(), rand_samp(), rand_samp())
                 for i in range(niter)]
 
@@ -50,7 +53,7 @@ def ransac_plane(img, niter, inlier_thresh):
         pmat = (x[0] * row_idx) + (x[1] * col_idx) + x[2]
         residuals = img - pmat
         num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
-        if num_inliers > most_inliers:
+        if num_inliers > most_inliers or best_residuals is None:
             most_inliers = num_inliers
             best_residuals = residuals
             best_coeffs = x

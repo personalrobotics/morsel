@@ -28,13 +28,24 @@ import bitefinder
 class AdaBiteServer:
 
     def __init__(self):
-        self.VERBOSE = False
+        self.VERBOSE = True
         self.finder = bitefinder.BiteFinder(debug=self.VERBOSE)
         self.ransac_iters = 200
         self.ransac_thresh = 0.01 # 1cm thresh?
         self.max_bites = 10
         self.bite_height = 0.01
         self.pub = None
+        self.maskfn = "mask.png"
+        self.prepare_mask()
+        self.decimate = 30
+        self.fcount = 0
+
+    def prepare_mask(self):
+    	self.raw_mask = cv2.imread(self.maskfn)
+    	layers = cv2.split(self.raw_mask)
+    	self.mask = np.zeros(layers[0].shape, dtype=np.float32)
+    	self.mask[layers[0] > 128] = 1.0
+    	print("Loaded mask")
 
     def decode_uncompressed_f32(self, data):
         if self.VERBOSE:
@@ -44,6 +55,7 @@ class AdaBiteServer:
         temp = np.fromstring(data.data, dtype=np.float32)
         temp = np.nan_to_num(temp)
         temp = temp.reshape(rows, cols)
+        temp = temp * self.mask
         if self.VERBOSE:
             print("rows: %d" % rows)
             print("cols: %d" % cols)
@@ -90,11 +102,20 @@ class AdaBiteServer:
         return (pt[0], pt[1], pt[0]*coeffs[0] + pt[1]*coeffs[1] + coeffs[2])
 
     def process_depth(self, img):
+    	self.fcount += 1
+    	if(self.fcount % self.decimate != 0):
+    		return
+
         # first, fit a plane with ransac and get the residuals
         best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
                                                 self.ransac_iters, 
                                                 self.ransac_thresh)
 
+
+        if(num_inliers == 0 or residuals is None):
+        	if(self.VERBOSE):
+        		print("No plane found.")
+        	return
 
         # find bite-sized things in the residuals
         bites = self.finder.find_bites(residuals, 
