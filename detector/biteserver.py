@@ -17,6 +17,8 @@ import rospy
 from sensor_msgs.msg import CompressedImage
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
+from geometry_msgs.msg import PoseArray
+from geometry_msgs.msg import Pose
 
 # json and base64
 import base64
@@ -34,7 +36,8 @@ class AdaBiteServer:
         self.ransac_thresh = 0.01 # 1cm thresh?
         self.max_bites = 10
         self.bite_height = 0.01
-        self.pub = None
+        self.json_pub = None
+        self.ros_pub = None
         self.maskfn = "mask.png"
         self.prepare_mask()
         self.decimate = 30
@@ -142,20 +145,35 @@ class AdaBiteServer:
         if self.VERBOSE:
             print("data: " + strdata)
 
-        if self.pub:
-            self.pub.publish(strdata)
+        if self.json_pub:
+            self.json_pub.publish(strdata)
+
+        if self.ros_pub:
+            rosdata = PoseArray()
+            rosdata.poses = [point_to_pose(p) for p in bites3d]
+
+            self.ros_pub.publish(rosdata)
 
     def callback_depth(self, data):
         img_base = self.decode_uncompressed_f32(data)
         self.process_depth(img_base)
         
-    def start_listening(self, depth_topic, pub_topic):
+    def start_listening(self, depth_topic, json_pub_topic, ros_pub_topic):
         rospy.init_node('adabitefinder')
 
         self.depth_sub = rospy.Subscriber(depth_topic, Image, 
                                           self.callback_depth, queue_size = 1)
 
-        self.pub = rospy.Publisher(pub_topic, String)
+        self.json_pub = rospy.Publisher(json_pub_topic, String)
+        self.ros_pub = rospy.Publisher(ros_pub_topic, PoseArray)
+
+def point_to_pose(p):
+    ret = Pose()
+    ret.position.x = p[0]
+    ret.position.y = p[1]
+    ret.position.z = p[2]
+    ret.orientation.w = 1.0 # make sure quat is normalized
+    return ret
 
 def deg_to_rad(d):
     return math.pi * (d / 180.0)
@@ -168,7 +186,8 @@ if __name__ == '__main__':
     frame_listener.set_intrinsics_from_fov(deg_to_rad(70.95), deg_to_rad(55.00), 
                                             320.0, 240.0)
     frame_listener.start_listening( "/softkinetic_driver/depth/image",
-                                    "/perception/morsel_detection")
+                                    "/perception/morsel_detection",
+                                    "/perception/morsel_pts")
 
     # keep ros going
     rospy.spin()
