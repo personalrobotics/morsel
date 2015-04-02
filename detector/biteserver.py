@@ -59,7 +59,13 @@ class AdaBiteServer(object):
         temp = np.fromstring(data.data, dtype=np.float32)
         temp = np.nan_to_num(temp)
         temp = temp.reshape(rows, cols)
-        temp = temp * self.mask
+        if self.mask is not None:
+            if temp.shape == self.mask.shape:
+                temp = temp * self.mask
+            else:
+                print("Mask does not match shape of image!")
+                print("Ignoring mask")
+                self.mask = None
 
         if self.downscale_factor < 1.0:
             cols = int(cols * self.downscale_factor)
