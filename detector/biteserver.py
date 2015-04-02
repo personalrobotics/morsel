@@ -28,7 +28,7 @@ import bitefinder
 class AdaBiteServer(object):
 
     def __init__(self):
-        self.VERBOSE = True
+        self.VERBOSE = False
         self.DEBUG_IMAGES = True
         self.finder = bitefinder.BiteFinder(debug=self.DEBUG_IMAGES)
         self.ransac_iters = 10

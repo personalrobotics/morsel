@@ -158,8 +158,6 @@ class BiteFinder(object):
 def colorize_kernel(k, mult=2550.0):
     r = np.array(np.maximum(-k, 0.0) * mult, dtype=np.uint8)
     g = np.array(np.maximum(k, 0.0) * mult, dtype=np.uint8)
-    print("r: " + str(np.max(r)))
-    print("g: " + str(np.max(g)))
     b = np.array(np.zeros(k.shape), dtype=np.uint8)
     return cv2.merge((b, g, r))
 
