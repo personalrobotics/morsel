@@ -17,7 +17,10 @@ def count_inliers(row_idx, col_idx, image, coeffs, inlier_thresh, valid_mask):
     return num_inliers, residuals
 
 def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
-    best_coeffs = np.array([0.0, 0.0, 0.0])
+    if initial_coeffs is not None:
+        best_coeffs = np.array(initial_coeffs)
+    else:
+        best_coeffs = np.array([0.0, 0.0, 0.0])
     most_inliers = 0
     best_residuals = None
     valid_mask = (img > 0.0)
@@ -45,7 +48,7 @@ def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
         most_inliers, best_residuals = count_inliers(row_idx, 
                                                      col_idx, 
                                                      img, 
-                                                     initial_coeffs, 
+                                                     best_coeffs, 
                                                      inlier_thresh, 
                                                      valid_mask)
 
