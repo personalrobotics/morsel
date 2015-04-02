@@ -10,8 +10,13 @@ def swap_xy(t):
 def sanitize_numpy_int(t):
     return [int(v) for v in t]
 
+def count_inliers(row_idx, col_idx, image, coeffs, inlier_thresh, valid_mask):
+    pmat = (coeffs[0] * row_idx) + (coeffs[1] * col_idx) + coeffs[2]
+    residuals = image - pmat
+    num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
+    return num_inliers, residuals
 
-def ransac_plane(img, niter, inlier_thresh):
+def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
     best_coeffs = np.array([0.0, 0.0, 0.0])
     most_inliers = 0
     best_residuals = None
@@ -35,6 +40,15 @@ def ransac_plane(img, niter, inlier_thresh):
 
     col_idx, row_idx = np.meshgrid(range(ncols), range(nrows))
 
+    # warm start with given coefficients
+    if initial_coeffs is not None:
+        most_inliers, best_residuals = count_inliers(row_idx, 
+                                                     col_idx, 
+                                                     img, 
+                                                     initial_coeffs, 
+                                                     inlier_thresh, 
+                                                     valid_mask)
+
     for (s1, s2, s3) in samps:
         A = np.array([[s1[0], s1[1], 1.0],
                       [s2[0], s2[1], 1.0],
@@ -46,9 +60,16 @@ def ransac_plane(img, niter, inlier_thresh):
             # singular matrix
             continue
 
-        pmat = (x[0] * row_idx) + (x[1] * col_idx) + x[2]
-        residuals = img - pmat
-        num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
+        #pmat = (x[0] * row_idx) + (x[1] * col_idx) + x[2]
+        #residuals = img - pmat
+        #num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
+        num_inliers, residuals = count_inliers(row_idx, 
+                                               col_idx, 
+                                               img, 
+                                               x, 
+                                               inlier_thresh, 
+                                               valid_mask)
+
         if num_inliers > most_inliers or best_residuals is None:
             most_inliers = num_inliers
             best_residuals = residuals

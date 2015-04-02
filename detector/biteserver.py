@@ -31,15 +31,16 @@ class AdaBiteServer(object):
         self.VERBOSE = True
         self.DEBUG_IMAGES = True
         self.finder = bitefinder.BiteFinder(debug=self.DEBUG_IMAGES)
-        self.ransac_iters = 200
+        self.ransac_iters = 10
         self.ransac_thresh = 0.01  # 1cm thresh?
+        self.plane_coeffs = [0.0, 0.0, 0.0]
         self.max_bites = 10
         self.bite_height = 0.01
         self.json_pub = None
         self.ros_pub = None
         self.maskfn = "mask.png"
         self.prepare_mask()
-        self.decimate = 30
+        self.decimate = 5
         self.fcount = 0
         self.downscale_factor = 0.5
 
@@ -121,7 +122,13 @@ class AdaBiteServer(object):
         # first, fit a plane with ransac and get the residuals
         best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
                                                                       self.ransac_iters,
-                                                                      self.ransac_thresh)
+                                                                      self.ransac_thresh,
+                                                                      self.plane_coeffs)
+
+        if self.VERBOSE:
+            print("Number of inliers: {}".format(num_inliers))
+
+        self.plane_coeffs = best_coeffs
 
         if(num_inliers == 0 or residuals is None):
             if(self.VERBOSE):
