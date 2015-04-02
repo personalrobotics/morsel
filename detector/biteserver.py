@@ -180,9 +180,9 @@ def deg_to_rad(d):
 if __name__ == '__main__':
 
     frame_listener = AdaBiteServer()
-    frame_listener.set_intrinsics_from_fov(deg_to_rad(70.95), deg_to_rad(55.00),
-                                           320.0, 240.0)
-    frame_listener.start_listening("/softkinetic_driver/depth/image",
+    frame_listener.set_intrinsics_from_fov(deg_to_rad(58), deg_to_rad(45),
+                                           640.0, 480.0)
+    frame_listener.start_listening("/camera/depth/image",
                                    "/perception/morsel_detection",
                                    "/perception/morsel_pts")
 
