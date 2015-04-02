@@ -126,6 +126,8 @@ class BiteFinder(object):
             self._debug_image = debug_draw_bites(
                 colorize_kernel(image, 1000.0), bites)
             cv2.imwrite("bites.png", self._debug_image)
+            cv2.imwrite("quality.png", 
+                        colorize_kernel(self._last_bite_quality, 0.5))
         return bites
 
 

@@ -28,8 +28,9 @@ import bitefinder
 class AdaBiteServer(object):
 
     def __init__(self):
-        self.VERBOSE = False
-        self.finder = bitefinder.BiteFinder(debug=self.VERBOSE)
+        self.VERBOSE = True
+        self.DEBUG_IMAGES = True
+        self.finder = bitefinder.BiteFinder(debug=self.DEBUG_IMAGES)
         self.ransac_iters = 200
         self.ransac_thresh = 0.01  # 1cm thresh?
         self.max_bites = 10
@@ -40,6 +41,7 @@ class AdaBiteServer(object):
         self.prepare_mask()
         self.decimate = 30
         self.fcount = 0
+        self.downscale_factor = 0.5
 
     def prepare_mask(self):
         self.raw_mask = cv2.imread(self.maskfn)
@@ -57,6 +59,12 @@ class AdaBiteServer(object):
         temp = np.nan_to_num(temp)
         temp = temp.reshape(rows, cols)
         temp = temp * self.mask
+
+        if self.downscale_factor < 1.0:
+            cols = int(cols * self.downscale_factor)
+            rows = int(rows * self.downscale_factor)
+            temp = cv2.resize(temp, (cols, rows))
+
         if self.VERBOSE:
             print("rows: %d" % rows)
             print("cols: %d" % cols)
@@ -65,11 +73,14 @@ class AdaBiteServer(object):
 
         return temp
 
-    def set_intrinsics_from_fov(self, hfov, vfov, width, height):
+    def set_intrinsics_from_fov(self, hfov, vfov, rwidth, rheight):
         # canonical image plane at distance 1, then
         # image_half_width/1 = tan(hfov)
         # image_half_height/1 = tan(vfov)
         # image_half_height = image_half_width / aspect
+        width = rwidth * self.downscale_factor
+        height = rheight * self.downscale_factor
+
         cx = width / 2.0
         cy = height / 2.0
         fx = (width / 2.0) / math.tan(hfov / 2.0)
