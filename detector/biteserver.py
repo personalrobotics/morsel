@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 # Python libs
-import math
+import math, sys, json
 
-# numpy and scipy
+# numpy
 import numpy as np
 
 # OpenCV
@@ -18,38 +18,43 @@ from std_msgs.msg import String
 from geometry_msgs.msg import PoseArray
 from geometry_msgs.msg import Pose
 
-# json
-import json
-
 # bite detector
 import bitefinder
 
 
 class AdaBiteServer(object):
 
-    def __init__(self):
-        self.VERBOSE = False
-        self.DEBUG_IMAGES = True
-        self.finder = bitefinder.BiteFinder(debug=self.DEBUG_IMAGES)
-        self.ransac_iters = 10
-        self.ransac_thresh = 0.01  # 1cm thresh?
+    def __init__(self, options = {}):
+        self.VERBOSE = options.get("verbose", False)
+        self.finder = bitefinder.BiteFinder(options)
+        self.ransac_iters = options.get("ransac_iters", 10)
+        self.ransac_thresh = options.get("ransac_thresh", 0.01)  # 1cm thresh?
         self.plane_coeffs = [0.0, 0.0, 0.0]
-        self.max_bites = 10
-        self.bite_height = 0.01
+        self.max_bites = options.get("max_bites", 10)
+        self.bite_height = options.get("bite_height", 0.01)
         self.json_pub = None
         self.ros_pub = None
-        self.maskfn = "mask.png"
+        self.maskfn = options.get("mask_filename", "mask.png")
         self.prepare_mask()
-        self.decimate = 5
+        self.decimate = options.get("decimate", 5)
         self.fcount = 0
-        self.downscale_factor = 0.5
+        self.downscale_factor = options.get("downscale_factor", 0.5)
+
+        self.set_intrinsics_from_fov(options.get("hfov", 58), 
+                                     options.get("vfov", 45),
+                                     options.get("hsize", 640.0),
+                                     options.get("vsize", 480.0))
 
     def prepare_mask(self):
         self.raw_mask = cv2.imread(self.maskfn)
         layers = cv2.split(self.raw_mask)
-        self.mask = np.zeros(layers[0].shape, dtype=np.float32)
-        self.mask[layers[0] > 128] = 1.0
-        print("Loaded mask")
+        if len(layers) != 0:
+            self.mask = np.zeros(layers[0].shape, dtype=np.float32)
+            self.mask[layers[0] > 128] = 1.0
+            print("Loaded mask")
+        else:
+            self.mask = None
+            print("Error loading mask file {}".format(self.maskfn))
 
     def decode_uncompressed_f32(self, data):
         if self.VERBOSE:
@@ -201,14 +206,31 @@ def point_to_pose(p):
 def deg_to_rad(d):
     return math.pi * (d / 180.0)
 
+def load_options(optlist):
+    opts = {}
+    for fn in optlist:
+        with open(fn, "rt") as src:
+            temp_opts = json.load(src)
+            opts.update(temp_opts)
+    if opts.get("verbose", False):
+        print("Options: {}".format(opts))
+    return opts
+
 if __name__ == '__main__':
 
-    frame_listener = AdaBiteServer()
-    frame_listener.set_intrinsics_from_fov(deg_to_rad(58), deg_to_rad(45),
-                                           640.0, 480.0)
-    frame_listener.start_listening("/camera/depth/image",
-                                   "/perception/morsel_detection",
-                                   "/perception/morsel_pts")
+    if len(sys.argv) > 1:
+        optfns = sys.argv[1:]
+        opts = load_options(optfns)
+    else:
+        opts = {}
+
+    frame_listener = AdaBiteServer(opts)
+
+    depth_topic = opts.get("depth_topic", "/camera/depth/image")
+    morsel_topic = opts.get("morsel_topic", "/perception/morsel_detection")
+    pose_topic = opts.get("pose_topic", "/perception/morsel_pose")
+
+    frame_listener.start_listening(depth_topic, morsel_topic, pose_topic)
 
     # keep ros going
     rospy.spin()

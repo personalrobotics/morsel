@@ -86,14 +86,13 @@ class BiteFinder(object):
 
     """finds bite size things to stab in a depth image"""
 
-    def __init__(self, debug=False):
-        # todo
-        self._kernel_size = 33
-        self._bite_radius = 0.6
-        self._border_sigma = 0.2
+    def __init__(self, options = {}):
+        self._kernel_size = options.get("kernel_size", 33)
+        self._bite_radius = options.get("bite_radius", 0.6)
+        self._border_sigma = options.get("border_sigma", 0.2)
         self._quality_thresh = 0.2 * (self._kernel_size ** 2.0)
         self._build_kernel()
-        self._debug = debug
+        self._debug = options.get("debug", False)
 
     def _build_kernel(self):
         x, y = np.meshgrid(np.linspace(-1.0, 1.0, self._kernel_size),

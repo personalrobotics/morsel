@@ -1,0 +1,8 @@
+{
+	"hfov": 70.95,
+	"vfov": 55.0,
+	"hsize": 320.0,
+	"vsize": 240.0,
+	"downscale_factor": 1.0,
+	"mask_filename": "mask_320x240.png"
+}
