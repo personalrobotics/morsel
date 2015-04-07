@@ -160,6 +160,12 @@ def colorize_kernel(k, mult=2550.0):
     b = np.array(np.zeros(k.shape), dtype=np.uint8)
     return cv2.merge((b, g, r))
 
+def squash_depth(image):
+    minval = np.min(image)
+    maxval = np.max(image)
+    valrange = maxval - minval
+    newimg = (image - minval) * (1.0 / valrange)
+    return np.array(newimg * 255.0, dtype = np.uint8)
 
 def debug_draw_bites(image, bites):
     ret = image

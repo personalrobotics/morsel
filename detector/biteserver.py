@@ -39,6 +39,9 @@ class AdaBiteServer(object):
         self.decimate = options.get("decimate", 5)
         self.fcount = 0
         self.downscale_factor = options.get("downscale_factor", 0.5)
+        self.save_depth_images = options.get("save_depth_images", False)
+        self.depth_image_path = options.get("depth_image_path", "depth_images/")
+        self.depth_image_format = options.get("depth_image_format", "png")
 
         self.set_intrinsics_from_fov(options.get("hfov", 58), 
                                      options.get("vfov", 45),
@@ -82,6 +85,20 @@ class AdaBiteServer(object):
             print("cols: %d" % cols)
             print("max: %g" % np.max(temp))
             print("min: %g" % np.min(temp))
+
+        if self.save_depth_images:
+            fn = "{}frame_{}.{}".format(self.depth_image_path, 
+                                       self.fcount, 
+                                       self.depth_image_format)
+            if self.depth_image_format == "png" or self.depth_image_format == "jpg":
+                img = bitefinder.squash_depth(temp)
+                color_img = cv2.merge([img, img, img])
+                cv2.imwrite(fn, color_img)
+            elif self.depth_image_format == "npy":
+                np.save(fn, temp)
+            else:
+                print("Unknown depth image format: {}".format(self.depth_image_format))
+                self.save_depth_images = False           
 
         return temp
 
