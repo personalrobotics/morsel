@@ -143,10 +143,6 @@ class AdaBiteServer(object):
         return (pt[0], pt[1], pt[0] * coeffs[0] + pt[1] * coeffs[1] + coeffs[2])
 
     def process_depth(self, img):
-        self.fcount += 1
-        if(self.fcount % self.decimate != 0):
-            return
-
         # first, fit a plane with ransac and get the residuals
         best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
                                                                       self.ransac_iters,
@@ -198,6 +194,10 @@ class AdaBiteServer(object):
             self.ros_pub.publish(rosdata)
 
     def callback_depth(self, data):
+        self.fcount += 1
+        if(self.fcount % self.decimate != 0):
+            return
+
         img_base = self.decode_uncompressed_f32(data)
         self.process_depth(img_base)
 
