@@ -16,6 +16,87 @@ def count_inliers(row_idx, col_idx, image, coeffs, inlier_thresh, valid_mask):
     num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
     return num_inliers, residuals
 
+def gen_count_inliers(bases, coeffs, target, inlier_thresh, valid_mask):
+    pmat = np.zeros(target.shape, dtype=target.dtype)
+    for (base, coeff) in zip(bases, coeffs):
+        pmat += (base * coeff)
+    residuals = target - pmat
+    num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
+    return num_inliers, residuals
+
+def generate_quad_bases(ncols, nrows):
+    X, Y = np.meshgrid(range(ncols), range(nrows))
+    X2 = X*X
+    Y2 = Y*Y
+    XY = X*Y
+    C = np.ones(X.shape, X.dtype)
+    # order so that first three values are standard plane coefficients
+    # for backwards compatibility
+    return [X, Y, C, XY, X2, Y2] 
+
+def ransac_quad(img, niter, inlier_thresh, initial_coeffs = None):
+    # TODO: Refactor this and ransac plane to avoid this duplicated code
+    num_coeffs = 6
+
+    if initial_coeffs is not None:
+        best_coeffs = np.array(initial_coeffs)
+    else:
+        best_coeffs = np.array([0.0] * num_coeffs)
+    most_inliers = 0
+    best_residuals = None
+    valid_mask = (img > 0.0)
+
+    nrows = img.shape[0]
+    ncols = img.shape[1]
+
+    # warning: this might use a lot of memory depending on your image
+    sample_locations = [np.unravel_index(v, valid_mask.shape)
+                        for v in np.nditer(np.where(valid_mask.ravel()))]
+
+    def rand_samp():
+        return random.choice(sample_locations)
+
+    if(len(sample_locations) == 0):
+        return (best_coeffs, 0, None)
+
+    samps = [tuple(rand_samp() for j in range(num_coeffs))
+             for i in range(niter)]
+
+    bases = generate_quad_bases(ncols, nrows)
+
+    # warm start with given coefficients
+    if initial_coeffs is not None:
+        most_inliers, best_residuals = count_inliers(row_idx, 
+                                                     col_idx, 
+                                                     img, 
+                                                     best_coeffs, 
+                                                     inlier_thresh, 
+                                                     valid_mask)
+
+    for samp in samps:
+        A = np.array([[b[s] for b in bases] for s in samp])
+        b = np.array([img[s] for s in samp])
+        try:
+            x = np.linalg.solve(A, b)
+        except np.linalg.LinAlgError as e:
+            # singular matrix
+            continue
+
+        #pmat = (x[0] * row_idx) + (x[1] * col_idx) + x[2]
+        #residuals = img - pmat
+        #num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
+        num_inliers, residuals = gen_count_inliers(bases, x, 
+                                                   img, inlier_thresh, 
+                                                   valid_mask)
+
+        if num_inliers > most_inliers or best_residuals is None:
+            most_inliers = num_inliers
+            best_residuals = residuals
+            best_coeffs = x
+
+    best_residuals[np.logical_not(valid_mask)] = 0.0
+    return (best_coeffs, most_inliers, best_residuals)
+
 def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
     if initial_coeffs is not None:
         best_coeffs = np.array(initial_coeffs)
@@ -80,6 +161,45 @@ def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
 
     best_residuals[np.logical_not(valid_mask)] = 0.0
     return (best_coeffs, most_inliers, best_residuals)
+
+class PlateFinder(object):
+    """Finds a circular plate and creates a binary mask for it"""
+
+    def __init__(self, options={}):
+        self._rim_width = options.get("rim_width", 10)
+        self._rim_margin = options.get("rim_margin", 10)
+        self._min_rad = options.get("min_radius", 100)
+        self._max_rad = options.get("max_radius", 200)
+        self._rad_steps = options.get("radius_steps", 10)
+        self._filled = options.get("filled", True)
+        self._debug = options.get("debug", True)
+        self._build_kernels()
+
+    def _build_kernel(self, radius):
+        b = radius + self._rim_width
+        x, y = np.meshgrid(np.linspace(-b, b, int(b*2)),
+                           np.linspace(-b, b, int(b*2)))
+        rad = (x ** 2 + y ** 2) ** 0.5
+
+        kern = np.ones(rad.shape, dtype=np.float32) * -1
+        if not self._filled:
+            kern[rad < radius] = 0.0
+        kern[(rad >= (radius - self._rim_width / 2.0)) * (rad <= (radius + self._rim_width / 2.0))] = 1.0
+        kern[rad >= (radius + self._rim_margin)] = 0.0
+
+        return kern
+
+    def _build_kernels(self):
+        self._kernels = []
+        for radius in np.linspace(self._min_rad, self._max_rad, self._rad_steps):
+            k = self._build_kernel(radius)
+            self._kernels.append((radius, k))
+            if self._debug:
+                colkern = colorize_kernel(k, 255.0)
+                cv2.imwrite("kernel_{}.png".format(radius), colkern)
+
+    def build_plate_mask(self, image):
+        pass
 
 
 class BiteFinder(object):
