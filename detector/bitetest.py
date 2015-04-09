@@ -46,6 +46,15 @@ def basic_test(test_image, options):
 
 def plate_test(test_image, options):
     pfinder = PlateFinder(options)
+    inlier_thresh = 0.02
+
+    best_coeffs, num_inliers, residuals = ransac_quad(test_image, 200, inlier_thresh)
+    print("Best coeffs: %s" % str(best_coeffs))
+    print("Num inliers: %d" % num_inliers)
+
+    cv2.imwrite("plane_residuals.png", colorize_kernel(residuals * 0.1))
+    mask = pfinder.build_plate_mask(residuals, -inlier_thresh)
+    cv2.imwrite("mask.png", cv2.merge((mask, mask, mask)))
 
 def load_options(optlist):
     opts = {"debug": True}

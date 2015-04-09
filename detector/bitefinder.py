@@ -166,11 +166,11 @@ class PlateFinder(object):
     """Finds a circular plate and creates a binary mask for it"""
 
     def __init__(self, options={}):
-        self._rim_width = options.get("rim_width", 10)
+        self._rim_width = options.get("rim_width", 5)
         self._rim_margin = options.get("rim_margin", 10)
-        self._min_rad = options.get("min_radius", 100)
-        self._max_rad = options.get("max_radius", 200)
-        self._rad_steps = options.get("radius_steps", 10)
+        self._min_rad = options.get("min_radius", 50)
+        self._max_rad = options.get("max_radius", 150)
+        self._rad_steps = options.get("radius_steps", 30)
         self._filled = options.get("filled", True)
         self._debug = options.get("debug", True)
         self._build_kernels()
@@ -184,6 +184,8 @@ class PlateFinder(object):
         kern = np.ones(rad.shape, dtype=np.float32) * -1
         if not self._filled:
             kern[rad < radius] = 0.0
+        else:
+            kern[rad < radius] = -5.0 / (radius ** 2.0)
         kern[(rad >= (radius - self._rim_width / 2.0)) * (rad <= (radius + self._rim_width / 2.0))] = 1.0
         kern[rad >= (radius + self._rim_margin)] = 0.0
 
@@ -191,15 +193,45 @@ class PlateFinder(object):
 
     def _build_kernels(self):
         self._kernels = []
-        for radius in np.linspace(self._min_rad, self._max_rad, self._rad_steps):
+        for (idx, radius) in enumerate(np.linspace(self._min_rad, self._max_rad, self._rad_steps)):
             k = self._build_kernel(radius)
             self._kernels.append((radius, k))
             if self._debug:
                 colkern = colorize_kernel(k, 255.0)
-                cv2.imwrite("kernel_{}.png".format(radius), colkern)
+                cv2.imwrite("kernel_{}.png".format(idx), colkern)
 
-    def build_plate_mask(self, image):
-        pass
+    def _find_plate(self, image, k_idx):
+        rad, k = self._kernels[k_idx]
+        plateness = cv2.filter2D(image, -1, k) / np.sum(np.abs(k))
+
+        bpos = np.unravel_index(np.argmax(plateness), plateness.shape)
+        bval = plateness[bpos] 
+
+        if self._debug:
+            pimg = colorize_kernel(plateness, 255.0)
+            cv2.imwrite("plateness_{}.png".format(k_idx), pimg)
+            print("k: {}, v: {}".format(k_idx, bval))
+
+        return (bpos, rad, bval)
+
+    def build_plate_mask(self, image, thresh):
+        thresh_image = create_signed_thresh(image, thresh)
+        if self._debug:
+            dimg = colorize_kernel(thresh_image, 255.0)
+            cv2.imwrite("plate_thresh.png", dimg)
+        best_val = 0.0
+        best_pos = (0,0)
+        best_rad = 0.0
+        for idx in range(len(self._kernels)):
+            pos, rad, val = self._find_plate(thresh_image, idx)
+            if val > best_val:
+                best_val = val
+                best_pos = pos
+                best_rad = rad
+        print("Res: {}".format((best_pos, best_rad, best_val)))
+        mask = np.zeros(thresh_image.shape, dtype=np.uint8)
+        cv2.circle(mask, swap_xy(best_pos), int(best_rad - self._rim_margin/2.0), 255, -1)
+        return mask
 
 
 class BiteFinder(object):
@@ -272,6 +304,13 @@ class BiteFinder(object):
             cv2.imwrite("quality.png", 
                         colorize_kernel(self._last_bite_quality, 0.5))
         return bites
+
+def create_signed_thresh(image, thresh):
+    thresh_image = np.array(image, dtype=np.float64)
+    old_image = thresh_image.copy()
+    thresh_image[old_image >= thresh] = -1.0
+    thresh_image[old_image < thresh] = 1.0
+    return thresh_image
 
 
 def colorize_kernel(k, mult=2550.0):
