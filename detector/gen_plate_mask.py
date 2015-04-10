@@ -24,7 +24,7 @@ class PlateMaskGenerator(object):
     def __init__(self, options = {}):
         self.VERBOSE = options.get("verbose", False)
         self.finder = bitefinder.PlateFinder(options)
-        self.ransac_iters = options.get("ransac_iters", 10)
+        self.ransac_iters = options.get("ransac_iters", 200)
         self.ransac_thresh = options.get("ransac_thresh", 0.01)  # 1cm thresh?
         self.plane_coeffs = [0.0, 0.0, 0.0]
         self.mask_filename = options.get("mask_filename", "mask.png")
@@ -72,10 +72,13 @@ class PlateMaskGenerator(object):
 
     def process_depth(self, img):
         # first, fit a plane with ransac and get the residuals
-        best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
-                                                                      self.ransac_iters,
-                                                                      self.ransac_thresh,
-                                                                      self.plane_coeffs)
+        # best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
+        #                                                               self.ransac_iters,
+        #                                                               self.ransac_thresh,
+        #                                                               self.plane_coeffs)
+        best_coeffs, num_inliers, residuals = bitefinder.ransac_quad(img, 
+                                                        self.ransac_iters, 
+                                                        self.ransac_thresh)
 
         if self.VERBOSE:
             print("Number of inliers: {}".format(num_inliers))
