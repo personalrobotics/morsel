@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Python libs
-import math, sys
+import math, sys, json
 
 # numpy
 import numpy as np
@@ -27,7 +27,7 @@ class PlateMaskGenerator(object):
         self.ransac_iters = options.get("ransac_iters", 10)
         self.ransac_thresh = options.get("ransac_thresh", 0.01)  # 1cm thresh?
         self.plane_coeffs = [0.0, 0.0, 0.0]
-        self.maskfn = options.get("mask_filename", "mask.png")
+        self.mask_filename = options.get("mask_filename", "mask.png")
         self.downscale_factor = options.get("downscale_factor", 0.5)
         self.save_depth_images = options.get("save_depth_images", False)
         self.depth_image_path = options.get("depth_image_path", "depth_images/")
@@ -92,7 +92,7 @@ class PlateMaskGenerator(object):
         cv2.imwrite(self.mask_filename, cv2.merge((mask, mask, mask)))
 
         print("Mask generated.")
-        rospy.shutdown_node("Mask generated.")
+        rospy.signal_shutdown("Mask generated.")
 
 
     def callback_depth(self, data):
@@ -127,8 +127,7 @@ if __name__ == '__main__':
     frame_listener = PlateMaskGenerator(opts)
 
     depth_topic = opts.get("depth_topic", "/camera/depth/image")
-
-    frame_listener.start_listening(depth_topic, morsel_topic, pose_topic)
+    frame_listener.start_listening(depth_topic)
 
     # keep ros going
     rospy.spin()
