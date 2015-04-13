@@ -166,10 +166,10 @@ class PlateFinder(object):
     """Finds a circular plate and creates a binary mask for it"""
 
     def __init__(self, options={}):
-        self._rim_width = options.get("rim_width", 2)
-        self._rim_margin = options.get("rim_margin", 2)
-        self._min_rad = options.get("min_radius", 50)
-        self._max_rad = options.get("max_radius", 150)
+        self._rim_width = options.get("rim_width", 4)
+        self._rim_margin = options.get("rim_margin", 4)
+        self._min_rad = options.get("min_radius", 25)
+        self._max_rad = options.get("max_radius", 100)
         self._rad_steps = options.get("radius_steps", 30)
         self._filled = options.get("filled", True)
         self._debug = options.get("debug", True)

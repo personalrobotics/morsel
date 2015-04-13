@@ -42,6 +42,7 @@ class AdaBiteServer(object):
         self.save_depth_images = options.get("save_depth_images", False)
         self.depth_image_path = options.get("depth_image_path", "depth_images/")
         self.depth_image_format = options.get("depth_image_format", "png")
+        self.nodename = options.get("node_name", "adabitefinder")
 
         self.set_intrinsics_from_fov(options.get("hfov", 58), 
                                      options.get("vfov", 45),
@@ -202,7 +203,7 @@ class AdaBiteServer(object):
         self.process_depth(img_base)
 
     def start_listening(self, depth_topic, json_pub_topic, ros_pub_topic):
-        rospy.init_node('adabitefinder')
+        rospy.init_node(self.nodename)
 
         self.depth_sub = rospy.Subscriber(depth_topic, Image,
                                           self.callback_depth, queue_size=1)
@@ -243,11 +244,18 @@ if __name__ == '__main__':
 
     frame_listener = AdaBiteServer(opts)
 
-    depth_topic = opts.get("depth_topic", "/camera/depth/image")
-    morsel_topic = opts.get("morsel_topic", "/perception/morsel_detection")
-    pose_topic = opts.get("pose_topic", "/perception/morsel_pose")
+    test_depth_image = opts.get("test_image", "")
+    if test_depth_image != "":
+        print("Running a test image...")
+        image_base = np.load(test_depth_image)
+        frame_listener.process_depth(image_base)
+        print("Finished running test.")
+    else:
+        depth_topic = opts.get("depth_topic", "/camera/depth/image")
+        morsel_topic = opts.get("morsel_topic", "/perception/morsel_detection")
+        pose_topic = opts.get("pose_topic", "/perception/morsel_pose")
 
-    frame_listener.start_listening(depth_topic, morsel_topic, pose_topic)
+        frame_listener.start_listening(depth_topic, morsel_topic, pose_topic)
 
-    # keep ros going
-    rospy.spin()
+        # keep ros going
+        rospy.spin()

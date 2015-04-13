@@ -4,5 +4,9 @@
 	"hsize": 640.0,
 	"vsize": 480.0,
 	"downscale_factor": 0.5,
-	"mask_filename": "mask_640x480.png"
+	"mask_filename": "plate_mask_640x480.png",
+	"depth_topic": "/camera/depth/image",
+	"ransac_iters": 200,
+	"ransac_thresh": 0.02,
+	"bite_height": 0.02
 }

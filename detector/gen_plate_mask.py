@@ -130,7 +130,14 @@ if __name__ == '__main__':
     frame_listener = PlateMaskGenerator(opts)
 
     depth_topic = opts.get("depth_topic", "/camera/depth/image")
-    frame_listener.start_listening(depth_topic)
 
-    # keep ros going
-    rospy.spin()
+    test_depth_image = opts.get("test_image", "")
+    if test_depth_image != "":
+        print("Running a test image...")
+        image_base = np.load(test_depth_image)
+        frame_listener.process_depth(image_base)
+        print("Finished running test.")
+    else:
+        frame_listener.start_listening(depth_topic)
+        # keep ros going
+        rospy.spin()
