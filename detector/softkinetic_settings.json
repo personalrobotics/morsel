@@ -4,6 +4,8 @@
 	"hsize": 320.0,
 	"vsize": 240.0,
 	"downscale_factor": 1.0,
-	"mask_filename": "plate_mask_320x240.png",
-	"depth_topic": "/softkinetic_driver/depth/image"
+	"mask_filename": "mask_320x240.png",
+	"depth_topic": "/softkinetic_driver/depth/image",
+	"ransac_thresh": 0.02,
+	"bite_height": 0.01
 }
