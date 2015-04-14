@@ -44,8 +44,8 @@ class AdaBiteServer(object):
         self.depth_image_format = options.get("depth_image_format", "png")
         self.nodename = options.get("node_name", "adabitefinder")
 
-        self.set_intrinsics_from_fov(options.get("hfov", 58), 
-                                     options.get("vfov", 45),
+        self.set_intrinsics_from_fov(deg_to_rad(options.get("hfov", 58)), 
+                                     deg_to_rad(options.get("vfov", 45)),
                                      options.get("hsize", 640.0),
                                      options.get("vsize", 480.0))
 
