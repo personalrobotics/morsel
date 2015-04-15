@@ -173,6 +173,7 @@ class PlateFinder(object):
         self._rad_steps = options.get("radius_steps", 30)
         self._filled = options.get("filled", True)
         self._debug = options.get("debug", True)
+        self._plate_margin = options.get("plate_margin", 4)
         self._build_kernels()
 
     def _build_kernel(self, radius):
@@ -198,7 +199,7 @@ class PlateFinder(object):
             self._kernels.append((radius, k))
             if self._debug:
                 colkern = colorize_kernel(k, 255.0)
-                cv2.imwrite("kernel_{}.png".format(idx), colkern)
+                cv2.imwrite("kernels/kernel_{}.png".format(idx), colkern)
 
     def _find_plate(self, image, k_idx):
         rad, k = self._kernels[k_idx]
@@ -209,7 +210,7 @@ class PlateFinder(object):
 
         if self._debug:
             pimg = colorize_kernel(plateness, 255.0)
-            cv2.imwrite("plateness_{}.png".format(k_idx), pimg)
+            cv2.imwrite("plateness/plateness_{}.png".format(k_idx), pimg)
             print("k: {}, v: {}".format(k_idx, bval))
 
         return (bpos, rad, bval)
@@ -230,7 +231,7 @@ class PlateFinder(object):
                 best_rad = rad
         print("Res: {}".format((best_pos, best_rad, best_val)))
         mask = np.zeros(thresh_image.shape, dtype=np.uint8)
-        cv2.circle(mask, swap_xy(best_pos), int(best_rad - self._rim_margin/2.0), 255, -1)
+        cv2.circle(mask, swap_xy(best_pos), int(best_rad - self._plate_margin), 255, -1)
         return mask
 
 
