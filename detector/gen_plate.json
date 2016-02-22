@@ -6,7 +6,7 @@
 	"downscale_factor": 1.0,
 	"mask_filename": "mask_640x480.png",
 	"depth_topic": "/camera/depth/image",
-	"ransac_iters": 2000,
+	"ransac_iters": 400,
 	"ransac_thresh": 0.01,
 	"bite_height": 0.01,
 	"min_radius": 100,
