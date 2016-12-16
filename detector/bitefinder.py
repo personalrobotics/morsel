@@ -265,6 +265,7 @@ class BiteFinder(object):
         kernel_size: size in pixels of the bite-finding kernel
         bite_radius: fraction of kernel occupied by the bite
         border_sigma: how 'fuzzy' the bite border is (larger = fuzzier)
+        debug: write debug images to disk
         """
         self._kernel_size = options.get("kernel_size", 33)
         self._bite_radius = options.get("bite_radius", 0.6)

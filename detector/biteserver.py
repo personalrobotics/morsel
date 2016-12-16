@@ -18,7 +18,31 @@ import bitefinder
 
 class AdaBiteServer(object):
     def __init__(self, options = {}):
-        """ Create a bite server. """
+        """ Create a bite server.
+
+        Options:
+        verbose: whether to print verbose debug information
+        ransac_iters: iterations of ransac for plane finding
+        ransac_thresh: inlier threshold (depth units) for plane finding
+        max_bites: maximum number of bites to find
+        bite_height: how tall (depth units) a bite must be
+        mask_filename: filename of plate mask to use
+        decimate: int N such that only process 1 out of every N frames
+        downscale_factor: downscale depth image (e.g., 0.5 = half size)
+        save_depth_images: true if you want to save depth images to disk
+        depth_image_path: path to save depth images to
+        depth_image_format: either png or jpg
+        node_name: what the ros node should be named
+        hfov: horizontal fov of depth camera (degrees)
+        vfov: vertical fov of depth camera (degrees)
+        hsize: horizontal size of depth image (pixels) before downscale
+        vsize: vertical size of depth image (pixels) before downscale
+        (for bite finder):
+        kernel_size: size in pixels of the bite-finding kernel
+        bite_radius: fraction of kernel occupied by the bite
+        border_sigma: how 'fuzzy' the bite border is (larger = fuzzier)
+        debug: write debug images to disk
+        """
         self.VERBOSE = options.get("verbose", False)
         self.finder = bitefinder.BiteFinder(options)
         self.ransac_iters = options.get("ransac_iters", 10)
