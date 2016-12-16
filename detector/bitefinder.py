@@ -29,6 +29,33 @@ def count_inliers(row_idx, col_idx, image, coeffs, inlier_thresh, valid_mask):
     num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
     return num_inliers, residuals
 
+def gen_count_inliers(bases, coeffs, target, inlier_thresh, valid_mask):
+    """ Count how many pixels in a depth image are 'close' to a weighted sum.
+
+    @param bases: a list of n basis images
+    @param coeffs: a list of n coefficients
+    @param target: target image
+    @param inlier_thresh: how close a depth pixel must be to count as an inlier.
+    @param valid_mask: binary mask of positions to count
+    """
+    pmat = np.zeros(target.shape, dtype=target.dtype)
+    for (base, coeff) in zip(bases, coeffs):
+        pmat += (base * coeff)
+    residuals = target - pmat
+    num_inliers = np.sum((np.abs(residuals) < inlier_thresh) * valid_mask)
+    return num_inliers, residuals
+
+def generate_quad_bases(ncols, nrows):
+    """ Generate quadratic bases for fitting a quadratic. """
+    X, Y = np.meshgrid(range(ncols), range(nrows))
+    X2 = X*X
+    Y2 = Y*Y
+    XY = X*Y
+    C = np.ones(X.shape, X.dtype)
+    # order so that first three values are standard plane coefficients
+    # for backwards compatibility
+    return [X, Y, C, XY, X2, Y2]
+
 def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
     """ Fit a plane to a depth image using ransac.
 
@@ -82,6 +109,57 @@ def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
 
         num_inliers, residuals = count_inliers(row_idx, col_idx, img, x,
                                                inlier_thresh, valid_mask)
+
+        if num_inliers > most_inliers or best_residuals is None:
+            most_inliers = num_inliers
+            best_residuals = residuals
+            best_coeffs = x
+
+    best_residuals[np.logical_not(valid_mask)] = 0.0
+    return (best_coeffs, most_inliers, best_residuals)
+
+def ransac_quad(img, niter, inlier_thresh):
+    """ Fit a quadratic to a depth image with ransac.
+
+    @param img: depth image to fit quadratic to
+    @param niter: number of ransac iterations
+    @param inlier_thresh: how close a depth pixel must be to be an inlier
+    """
+    # TODO: Refactor this and ransac plane to avoid this duplicated code
+    num_coeffs = 6
+    best_coeffs = np.array([0.0] * num_coeffs)
+    most_inliers = 0
+    best_residuals = None
+    valid_mask = (img > 0.0)
+
+    nrows = img.shape[0]
+    ncols = img.shape[1]
+
+    # warning: this might use a lot of memory depending on your image
+    sample_locations = [np.unravel_index(v, valid_mask.shape)
+                        for v in np.nditer(np.where(valid_mask.ravel()))]
+
+    def rand_samp():
+        return random.choice(sample_locations)
+
+    if(len(sample_locations) == 0):
+        return (best_coeffs, 0, None)
+
+    samps = [tuple(rand_samp() for j in range(num_coeffs))
+             for i in range(niter)]
+    bases = generate_quad_bases(ncols, nrows)
+
+    for samp in samps:
+        A = np.array([[b[s] for b in bases] for s in samp])
+        b = np.array([img[s] for s in samp])
+        try:
+            x = np.linalg.solve(A, b)
+        except np.linalg.LinAlgError as e:
+            # singular matrix
+            continue
+
+        num_inliers, residuals = gen_count_inliers(bases, x, img, inlier_thresh,
+                                                   valid_mask)
 
         if num_inliers > most_inliers or best_residuals is None:
             most_inliers = num_inliers
