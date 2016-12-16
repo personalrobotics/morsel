@@ -44,7 +44,7 @@ class AdaBiteServer(object):
         self.depth_image_format = options.get("depth_image_format", "png")
         self.nodename = options.get("node_name", "adabitefinder")
 
-        self.set_intrinsics_from_fov(deg_to_rad(options.get("hfov", 58)), 
+        self.set_intrinsics_from_fov(deg_to_rad(options.get("hfov", 58)),
                                      deg_to_rad(options.get("vfov", 45)),
                                      options.get("hsize", 640.0),
                                      options.get("vsize", 480.0))
@@ -88,8 +88,8 @@ class AdaBiteServer(object):
             print("min: %g" % np.min(temp))
 
         if self.save_depth_images:
-            fn = "{}frame_{}.{}".format(self.depth_image_path, 
-                                       self.fcount, 
+            fn = "{}frame_{}.{}".format(self.depth_image_path,
+                                       self.fcount,
                                        self.depth_image_format)
             if self.depth_image_format == "png" or self.depth_image_format == "jpg":
                 img = bitefinder.squash_depth(temp)
@@ -99,7 +99,7 @@ class AdaBiteServer(object):
                 np.save(fn, temp)
             else:
                 print("Unknown depth image format: {}".format(self.depth_image_format))
-                self.save_depth_images = False           
+                self.save_depth_images = False
 
         return temp
 
@@ -211,7 +211,6 @@ class AdaBiteServer(object):
         self.json_pub = rospy.Publisher(json_pub_topic, String)
         self.ros_pub = rospy.Publisher(ros_pub_topic, PoseArray)
 
-
 def point_to_pose(p):
     ret = Pose()
     ret.position.x = p[0]
@@ -219,7 +218,6 @@ def point_to_pose(p):
     ret.position.z = p[2]
     ret.orientation.w = 1.0  # make sure quat is normalized
     return ret
-
 
 def deg_to_rad(d):
     return math.pi * (d / 180.0)
@@ -235,7 +233,6 @@ def load_options(optlist):
     return opts
 
 if __name__ == '__main__':
-
     if len(sys.argv) > 1:
         optfns = sys.argv[1:]
         opts = load_options(optfns)
