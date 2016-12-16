@@ -5,6 +5,7 @@ import math, sys, json
 import numpy as np
 import cv2
 import rospy
+import argparse
 
 # Ros Messages
 from sensor_msgs.msg import Image
@@ -243,11 +244,16 @@ def load_options(optlist):
     return opts
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        optfns = sys.argv[1:]
-        opts = load_options(optfns)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--configfile", help="json config file to use")
+    parser.add_argument("--configpath", help="ros parameter server path to use",
+                        default="/morsel")
+    args = parser.parse_args()
+
+    if args.configfile:
+        opts = load_options([args.configfile])
     else:
-        opts = {}
+        opts = rospy.get_param(args.configpath)
 
     frame_listener = AdaBiteServer(opts)
 
