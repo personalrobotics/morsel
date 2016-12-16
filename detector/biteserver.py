@@ -2,14 +2,8 @@
 
 # Python libs
 import math, sys, json
-
-# numpy
 import numpy as np
-
-# OpenCV
 import cv2
-
-# Ros libraries
 import rospy
 
 # Ros Messages
@@ -21,10 +15,9 @@ from geometry_msgs.msg import Pose
 # bite detector
 import bitefinder
 
-
 class AdaBiteServer(object):
-
     def __init__(self, options = {}):
+        """ Create a bite server. """
         self.VERBOSE = options.get("verbose", False)
         self.finder = bitefinder.BiteFinder(options)
         self.ransac_iters = options.get("ransac_iters", 10)
@@ -35,7 +28,7 @@ class AdaBiteServer(object):
         self.json_pub = None
         self.ros_pub = None
         self.maskfn = options.get("mask_filename", "mask.png")
-        self.prepare_mask()
+        self._prepare_mask()
         self.decimate = options.get("decimate", 5)
         self.fcount = 0
         self.downscale_factor = options.get("downscale_factor", 0.5)
@@ -49,8 +42,8 @@ class AdaBiteServer(object):
                                      options.get("hsize", 640.0),
                                      options.get("vsize", 480.0))
 
-    def prepare_mask(self):
-        self.raw_mask = cv2.imread(self.maskfn)
+    def _prepare_mask(self):
+        self.raw_mask = cv2.imread("config/{}".format(self.maskfn))
         layers = cv2.split(self.raw_mask)
         if len(layers) != 0:
             self.mask = np.zeros(layers[0].shape, dtype=np.float32)
@@ -60,7 +53,7 @@ class AdaBiteServer(object):
             self.mask = None
             print("Error loading mask file {}".format(self.maskfn))
 
-    def decode_uncompressed_f32(self, data):
+    def _decode_uncompressed_f32(self, data):
         if self.VERBOSE:
             print("Data has encoding: %s" % data.encoding)
         rows = data.height
@@ -104,6 +97,14 @@ class AdaBiteServer(object):
         return temp
 
     def set_intrinsics_from_fov(self, hfov, vfov, rwidth, rheight):
+        """ Set camera intrinsics from horizontal and vertical field of views.
+
+        @param hfov: horizontal field of view (radians)
+        @param vfov: vertical field of view (radians)
+        @param rwidth: expected image width (pixels)
+        @param rheight: expected image height (pixels)
+        """
+
         # canonical image plane at distance 1, then
         # image_half_width/1 = tan(hfov)
         # image_half_height/1 = tan(vfov)
@@ -122,6 +123,11 @@ class AdaBiteServer(object):
         print(self._inv_projmat)
 
     def set_intrinsics(self, K, zero_centered=True):
+        """ Set camera intrinsics directly from a matrix.
+
+        @param K: 3x3 intrinsics matrix
+        @param zero_centered: whether the intrinsics matrix has (0,0) as center
+        """
         self._K = K.copy()
         if zero_centered and self._normMat is not None:
             self._projmat = self._normMat.dot(K)
@@ -144,19 +150,18 @@ class AdaBiteServer(object):
         return (pt[0], pt[1], pt[0] * coeffs[0] + pt[1] * coeffs[1] + coeffs[2])
 
     def process_depth(self, img):
+        """ Process a depth image to find and publish bites. """
         # first, fit a plane with ransac and get the residuals
         best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
-                                                                      self.ransac_iters,
-                                                                      self.ransac_thresh,
-                                                                      self.plane_coeffs)
-
+                                                          self.ransac_iters,
+                                                          self.ransac_thresh,
+                                                          self.plane_coeffs)
         if self.VERBOSE:
             print("Number of inliers: {}".format(num_inliers))
-
         self.plane_coeffs = best_coeffs
 
-        if(num_inliers == 0 or residuals is None):
-            if(self.VERBOSE):
+        if num_inliers == 0 or residuals is None:
+            if self.VERBOSE:
                 print("No plane found.")
             return
 
@@ -169,12 +174,11 @@ class AdaBiteServer(object):
         bite_positions = [self._assign_bite_depth(b[0], best_coeffs)
                           for b in bites]
 
-        # compute projections
+        # compute projections and publish results
         pts_3d = self.project_points(bite_positions)
+        self._publish_bites(best_coeffs, bites, pts_3d)
 
-        self.publish_bites(best_coeffs, bites, pts_3d)
-
-    def publish_bites(self, plane_coeffs, bites, bites3d):
+    def _publish_bites(self, plane_coeffs, bites, bites3d):
         jdata = {}
         jdata["plane"] = list(plane_coeffs)
         jdata["bites"] = bites
@@ -194,19 +198,25 @@ class AdaBiteServer(object):
 
             self.ros_pub.publish(rosdata)
 
-    def callback_depth(self, data):
+    def _callback_depth(self, data):
         self.fcount += 1
         if(self.fcount % self.decimate != 0):
             return
 
-        img_base = self.decode_uncompressed_f32(data)
+        img_base = self._decode_uncompressed_f32(data)
         self.process_depth(img_base)
 
     def start_listening(self, depth_topic, json_pub_topic, ros_pub_topic):
+        """ Start serving bites.
+
+        @param depth_topic: the topic name to get depth images from
+        @param json_pub_topic: the topic name to publish JSON string bites to
+        @param ros_pub_topic: the topic name to publish a pose array to
+        """
         rospy.init_node(self.nodename)
 
         self.depth_sub = rospy.Subscriber(depth_topic, Image,
-                                          self.callback_depth, queue_size=1)
+                                          self._callback_depth, queue_size=1)
 
         self.json_pub = rospy.Publisher(json_pub_topic, String)
         self.ros_pub = rospy.Publisher(ros_pub_topic, PoseArray)
@@ -225,7 +235,7 @@ def deg_to_rad(d):
 def load_options(optlist):
     opts = {}
     for fn in optlist:
-        with open(fn, "rt") as src:
+        with open("config/{}".format(fn), "rt") as src:
             temp_opts = json.load(src)
             opts.update(temp_opts)
     if opts.get("verbose", False):
@@ -252,7 +262,6 @@ if __name__ == '__main__':
         morsel_topic = opts.get("morsel_topic", "/perception/morsel_detection")
         pose_topic = opts.get("pose_topic", "/perception/morsel_pose")
 
+        # enter main listening loop
         frame_listener.start_listening(depth_topic, morsel_topic, pose_topic)
-
-        # keep ros going
         rospy.spin()
