@@ -8,7 +8,7 @@ def swap_xy(t):
     return (t[1], t[0])
 
 def sanitize_numpy_int(t):
-    """ Turn the input into a normal list of ints.
+    """ Turn a list of numpy ints into a normal list of ints.
 
     Numpy has a habit of returning strange types.
     """
@@ -23,6 +23,7 @@ def count_inliers(row_idx, col_idx, image, coeffs, inlier_thresh, valid_mask):
     @param coeffs: list [A,B,C] of plane coefficients, z = Ax + By + C
     @param inlier_thresh: distance a depth pixel can be from plane to be inlier
     @param valid_mask: binary image (1=valid) of area to count
+    @return number of inliers, residuals
     """
     pmat = (coeffs[0] * row_idx) + (coeffs[1] * col_idx) + coeffs[2]
     residuals = image - pmat
@@ -37,6 +38,7 @@ def gen_count_inliers(bases, coeffs, target, inlier_thresh, valid_mask):
     @param target: target image
     @param inlier_thresh: how close a depth pixel must be to count as an inlier.
     @param valid_mask: binary mask of positions to count
+    @return number of inliers, residuals
     """
     pmat = np.zeros(target.shape, dtype=target.dtype)
     for (base, coeff) in zip(bases, coeffs):
@@ -63,6 +65,7 @@ def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
     @param niter: how many iterations of ransac to run
     @param inlier_thresh: how far from the plane a pixel can be to be an inlier
     @param initial_coeffs: optional initial plane coefficients Ax+By+C
+    @return plane coefficients, number of inliers, residuals
     """
 
     if initial_coeffs is not None:
@@ -119,11 +122,12 @@ def ransac_plane(img, niter, inlier_thresh, initial_coeffs = None):
     return (best_coeffs, most_inliers, best_residuals)
 
 def ransac_quad(img, niter, inlier_thresh):
-    """ Fit a quadratic to a depth image with ransac.
+    """ Fit a quadratic function to a depth image with ransac.
 
     @param img: depth image to fit quadratic to
     @param niter: number of ransac iterations
     @param inlier_thresh: how close a depth pixel must be to be an inlier
+    @return quadratric coefficients, number of inliers, residuals
     """
     # TODO: Refactor this and ransac plane to avoid this duplicated code
     num_coeffs = 6
@@ -237,6 +241,7 @@ class PlateFinder(object):
 
         @param image: input depth image.
         @param thresh: Not really sure what this does TBH.
+        @return mask: the plate mask (binary image same size as image)
         """
         thresh_image = create_signed_thresh(image, thresh)
         if self._debug:
@@ -313,6 +318,7 @@ class BiteFinder(object):
         @param image: the depth image
         @param n: maximum number of bites to find
         @param thresh: how 'bitelike' a position has to be to count as a bite
+        @return bites: a list of ((x, y), radius, quality)
         """
         if len(image.shape) > 2:
             b, g, r = cv2.split(image)
