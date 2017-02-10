@@ -1,18 +1,14 @@
 #!/usr/bin/env python
 
 # Python libs
-import math, sys, json
-
-# numpy
+import math
+import sys
+import json
 import numpy as np
-
-# OpenCV
 import cv2
 
 # Ros libraries
 import rospy
-
-# Ros Messages
 from sensor_msgs.msg import Image
 
 # bite detector
@@ -92,7 +88,8 @@ class PlateMaskGenerator(object):
 
         cv2.imwrite("plane_residuals.png", bitefinder.colorize_kernel(residuals * 0.1))
         mask = self.finder.build_plate_mask(residuals, -self.ransac_thresh)
-        cv2.imwrite(self.mask_filename, cv2.merge((mask, mask, mask)))
+        maskfn = "config/{}".format(self.mask_filename)
+        cv2.imwrite(maskfn, cv2.merge((mask, mask, mask)))
 
         print("Mask generated.")
         rospy.signal_shutdown("Mask generated.")
@@ -112,7 +109,7 @@ class PlateMaskGenerator(object):
 def load_options(optlist):
     opts = {}
     for fn in optlist:
-        with open(fn, "rt") as src:
+        with open("config/{}".format(fn), "rt") as src:
             temp_opts = json.load(src)
             opts.update(temp_opts)
     if opts.get("verbose", False):

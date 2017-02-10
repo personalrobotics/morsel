@@ -31,7 +31,7 @@ class AdaBiteServer(object):
         downscale_factor: downscale depth image (e.g., 0.5 = half size)
         save_depth_images: true if you want to save depth images to disk
         depth_image_path: path to save depth images to
-        depth_image_format: either png or jpg
+        depth_image_format: either "png" or "jpg"
         node_name: what the ros node should be named
         hfov: horizontal fov of depth camera (degrees)
         vfov: vertical fov of depth camera (degrees)
@@ -41,7 +41,7 @@ class AdaBiteServer(object):
         kernel_size: size in pixels of the bite-finding kernel
         bite_radius: fraction of kernel occupied by the bite
         border_sigma: how 'fuzzy' the bite border is (larger = fuzzier)
-        debug: write debug images to disk
+        debug: (bool) write debug images to disk
         """
         self.VERBOSE = options.get("verbose", False)
         self.finder = bitefinder.BiteFinder(options)
@@ -69,6 +69,8 @@ class AdaBiteServer(object):
 
     def _prepare_mask(self):
         self.raw_mask = cv2.imread("config/{}".format(self.maskfn))
+        if self.raw_mask is None:
+            raise IOError("Error reading mask file [{}].".format(self.maskfn))
         layers = cv2.split(self.raw_mask)
         if len(layers) != 0:
             self.mask = np.zeros(layers[0].shape, dtype=np.float32)
@@ -76,7 +78,7 @@ class AdaBiteServer(object):
             print("Loaded mask")
         else:
             self.mask = None
-            print("Error loading mask file {}".format(self.maskfn))
+            raise ValueError("Mask file has issues: {}".format(self.maskfn))
 
     def _decode_uncompressed_f32(self, data):
         if self.VERBOSE:
@@ -91,8 +93,7 @@ class AdaBiteServer(object):
                 temp = temp * self.mask
             else:
                 print("Mask does not match shape of image!")
-                print("Ignoring mask")
-                self.mask = None
+                raise 
 
         if self.downscale_factor < 1.0:
             cols = int(cols * self.downscale_factor)
@@ -153,6 +154,7 @@ class AdaBiteServer(object):
         @param K: 3x3 intrinsics matrix
         @param zero_centered: whether the intrinsics matrix has (0,0) as center
         """
+
         self._K = K.copy()
         if zero_centered and self._normMat is not None:
             self._projmat = self._normMat.dot(K)
@@ -176,6 +178,7 @@ class AdaBiteServer(object):
 
     def process_depth(self, img):
         """ Process a depth image to find and publish bites. """
+
         # first, fit a plane with ransac and get the residuals
         best_coeffs, num_inliers, residuals = bitefinder.ransac_plane(img,
                                                           self.ransac_iters,
