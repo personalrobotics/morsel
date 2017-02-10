@@ -243,8 +243,8 @@ class AdaBiteServer(object):
         self.depth_sub = rospy.Subscriber(depth_topic, Image,
                                           self._callback_depth, queue_size=1)
 
-        self.json_pub = rospy.Publisher(json_pub_topic, String)
-        self.ros_pub = rospy.Publisher(ros_pub_topic, PoseArray)
+        self.json_pub = rospy.Publisher(json_pub_topic, String, queue_size=1)
+        self.ros_pub = rospy.Publisher(ros_pub_topic, PoseArray, queue_size=1)
 
 def point_to_pose(p):
     ret = Pose()
