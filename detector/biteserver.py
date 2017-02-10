@@ -267,17 +267,21 @@ def load_options(optlist):
         print("Options: {}".format(opts))
     return opts
 
-if __name__ == '__main__':
+def do_main():
+    # need to shove this into a function so we can use 'return'
     parser = argparse.ArgumentParser()
-    parser.add_argument("--configfile", help="json config file to use")
-    parser.add_argument("--configpath", help="ros parameter server path to use",
-                        default="/morsel")
+    parser.add_argument("--configfile", help="json config file(s) to use",
+                        nargs="+")
+    parser.add_argument("--configpath", help="ros param server path to use")
     args = parser.parse_args()
 
     if args.configfile:
-        opts = load_options([args.configfile])
-    else:
+        opts = load_options(args.configfile)
+    elif args.configpath:
         opts = rospy.get_param(args.configpath)
+    else:
+        print("Need to provide either --configfile or --configpath!")
+        return
 
     frame_listener = AdaBiteServer(opts)
 
@@ -295,3 +299,7 @@ if __name__ == '__main__':
         # enter main listening loop
         frame_listener.start_listening(depth_topic, morsel_topic, pose_topic)
         rospy.spin()
+
+
+if __name__ == '__main__':
+    do_main()
