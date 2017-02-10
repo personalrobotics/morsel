@@ -92,8 +92,10 @@ class AdaBiteServer(object):
             if temp.shape == self.mask.shape:
                 temp = temp * self.mask
             else:
-                print("Mask does not match shape of image!")
-                raise 
+                msize = "{}x{}".format(self.mask.shape[1], self.mask.shape[0])
+                isize = "{}x{}".format(temp.shape[1], temp.shape[0])
+                raise ValueError("Mask does not match shape of image! " + 
+                                 "mask {} vs image {}".format(msize, isize))
 
         if self.downscale_factor < 1.0:
             cols = int(cols * self.downscale_factor)
