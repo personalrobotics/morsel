@@ -238,6 +238,9 @@ if __name__ == '__main__':
 
     if len(sys.argv) > 1:
         optfns = sys.argv[1:]
+        # filter out roslaunch arguments starting with __
+        optfns = [x for x in optfns if not x.startswith('__')]
+
         opts = load_options(optfns)
     else:
         opts = {}
