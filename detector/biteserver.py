@@ -265,9 +265,10 @@ def deg_to_rad(d):
 def load_options(optlist):
     opts = {}
     for fn in optlist:
-        with open("config/{}".format(fn), "rt") as src:
-            temp_opts = json.load(src)
-            opts.update(temp_opts)
+	if not fn.startswith('__'):
+            with open("{}".format(fn), "rt") as src:
+                temp_opts = json.load(src)
+                opts.update(temp_opts)
     if opts.get("verbose", False):
         print("Options: {}".format(opts))
     return opts
