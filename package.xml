@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>morsel_detector</name>
+  <version>0.1.0</version>
+  <description>Morsel detector for ADA demos</description>
+  <maintainer email="pmatikai@andrew.cmu.edu">Pyry Matikainen</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>j
+</package>
